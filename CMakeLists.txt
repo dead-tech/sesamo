@@ -20,10 +20,11 @@ add_library(imgui
 	${imgui_external_SOURCE_DIR}/imgui_draw.cpp
 	${imgui_external_SOURCE_DIR}/imgui_tables.cpp
 	${imgui_external_SOURCE_DIR}/imgui_widgets.cpp
+	${imgui_external_SOURCE_DIR}/imgui_demo.cpp
 	${imgui_external_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
 	${imgui_external_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 target_include_directories(imgui PUBLIC ${imgui_external_SOURCE_DIR})
 
 add_executable(${PROJECT_NAME} src/main.cpp)
-target_link_libraries(${PROJECT_NAME} ${GLFW_LIBRARIES} imgui GL)
+target_link_libraries(${PROJECT_NAME} glfw3 imgui GL)
