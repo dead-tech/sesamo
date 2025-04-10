@@ -1,9 +1,16 @@
+#include <vector>
 #include <iostream>
-#include <GLFW/glfw3.h>
+#include <numeric>
 
+#include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+
+#include <termios.h>
+#include <sys/ioctl.h>
+
+#include "Serial.hpp"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -40,6 +47,8 @@ auto main() -> int
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    std::optional<SerialChannel> serial = {};
+    std::vector<std::string> buffer = {};
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -52,38 +61,40 @@ auto main() -> int
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-
         {
-            static float f = 0.0f;
-            static int counter = 0;
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+            ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+            ImGui::Begin("sesamo", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize);
 
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
+            if (ImGui::Button("Connect")) {
+                // FIXME: Proper error handling
+                serial = SerialChannel::open("/dev/ttyACM0", B19200);
+                assert(serial);
+            }
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+            if (serial) {
+                fd_set readfds;
+                FD_ZERO(&readfds);
+                FD_SET(serial->fd, &readfds);
 
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
+                struct timeval timeout = {0, 0}; // 0 seconds, 0 microseconds = non-blocking
+                int ready = select(serial->fd+ 1, &readfds, nullptr, nullptr, &timeout);
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+                if (ready > 0 && FD_ISSET(serial->fd, &readfds)) {
+                    const auto message = serial->read();
+                    if (message) {
+                        buffer.push_back(*message);
+                    }
+                }
+
+                const auto result = std::accumulate(buffer.begin(), buffer.end(), std::string{});
+                ImGui::Text("%s", result.c_str());
+            }
+
             ImGui::End();
-        }
-
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
+            ImGui::PopStyleVar(1);
         }
 
         ImGui::Render();
@@ -95,6 +106,10 @@ auto main() -> int
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
+    }
+
+    if (serial) {
+        serial->close();
     }
 
     ImGui_ImplOpenGL3_Shutdown();
