@@ -3,8 +3,8 @@ project(sesamo)
 
 include(FetchContent)
 
-set(CXX_FLAGS "-std=c++20 -Wall -Wextra -Werror -Wshadow -Wconversion -Wpedantic")
-set(CMAKE_CXX_STANDARD 20)
+set(CXX_FLAGS "-std=c++2b -Wall -Wextra -Werror -Wshadow -Wconversion -Wpedantic -ggdb")
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
@@ -30,5 +30,5 @@ add_library(imgui
 )
 target_include_directories(imgui PUBLIC ${imgui_external_SOURCE_DIR})
 
-add_executable(${PROJECT_NAME} src/main.cpp src/Serial.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/Serial.cpp src/Application.cpp)
 target_link_libraries(${PROJECT_NAME} glfw3 imgui GL)
