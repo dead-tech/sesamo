@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <memory>
+#include <vector>
 
 #include <GLFW/glfw3.h>
 
@@ -31,9 +32,13 @@ private:
     constexpr static auto WINDOW_HEIGHT = 720;
     constexpr static const char* GLSL_VERSION = "#version 330";
 
+    constexpr static auto TTY_PATH = "/dev/";
+
 private:
     GLFWwindow* window = nullptr;
     std::optional<SerialChannel> serial = std::nullopt;
+    std::vector<std::string> available_ttys = {};
+    size_t selected_tty = 0;
 };
 
 #endif // SESAMO_APPLICATION_HPP

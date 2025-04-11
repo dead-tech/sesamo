@@ -1,14 +1,43 @@
 #include "Application.hpp"
 
-#include <iostream>
-#include <format>
-#include <vector>
+#include <algorithm>
+#include <filesystem>
 #include <termios.h>
+#include <format>
+#include <iostream>
 #include <numeric>
+#include <ranges>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+
+[[nodiscard]] static auto load_available_ttys(const auto& path)
+{
+    const auto iterator = std::filesystem::directory_iterator(path);
+
+    const auto stringify = [](const auto& dir_entry) {
+        return dir_entry.path().string();
+    };
+
+    const auto is_valid_tty = [](const auto& str) {
+        const std::string prefix = "/dev/tty";
+        if (!str.starts_with(prefix)) {
+            return false;
+        }
+
+        const auto substr = str.substr(prefix.size());
+        return std::ranges::find_if(substr, [](const char ch) { return !std::isdigit(ch); }) != substr.end();
+    };
+
+    auto ret = iterator
+        | std::views::transform(stringify)
+        | std::views::filter(is_valid_tty)
+        | std::ranges::to<std::vector>();
+
+    std::ranges::sort(ret);
+    return ret;
+}
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -17,7 +46,6 @@ static void glfw_error_callback(int error, const char* description)
 
 auto App::spawn() -> std::unique_ptr<App>
 {
-
     glfwSetErrorCallback(glfw_error_callback);
 
     if (!glfwInit()) {
@@ -58,6 +86,7 @@ auto App::spawn() -> std::unique_ptr<App>
 App::App(GLFWwindow* window)
     : window { window }
 {
+    available_ttys = load_available_ttys(TTY_PATH);
 }
 
 App::~App()
@@ -102,7 +131,7 @@ void App::run()
             ImGui::BeginDisabled(serial->is_connected());
             if (ImGui::Button("Connect")) {
                 // FIXME: Proper error handling
-                serial = SerialChannel::open("/dev/ttyACM0", B19200);
+                serial = SerialChannel::open(available_ttys[selected_tty], B19200);
                 assert(serial);
             }
             ImGui::EndDisabled();
@@ -114,6 +143,27 @@ void App::run()
                 serial->close();
             }
             ImGui::EndDisabled();
+
+            ImGui::SameLine();
+
+
+            ImGui::Text("Select tty device: ");
+            ImGui::SameLine();
+
+            if (ImGui::BeginCombo("##SelectTty", available_ttys[selected_tty].c_str())) {
+                for (size_t i = 0; i < available_ttys.size(); ++i) {
+                    const bool selected = selected_tty == i;
+                    if (ImGui::Selectable(available_ttys[i].c_str(), selected)) {
+                        selected_tty = i;
+                    }
+
+                    if (selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+
+                ImGui::EndCombo();
+            }
 
             if (serial->is_connected() && serial->has_data_to_read()) {
                 if (const auto message = serial->read(); message) {
