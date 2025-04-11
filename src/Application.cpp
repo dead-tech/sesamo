@@ -102,6 +102,18 @@ App::~App()
     glfwTerminate();
 }
 
+void App::handle_input()
+{
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+        serial = SerialChannel::open(available_ttys[selected_tty], B19200);
+        assert(serial);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        serial->close();
+    }
+}
+
 void App::run()
 {
     // TODO: cleanup all this mess
@@ -117,6 +129,8 @@ void App::run()
         {
             continue;
         }
+
+        handle_input();
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();

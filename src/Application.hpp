@@ -27,6 +27,8 @@ public:
 private:
     explicit App(GLFWwindow* window);
 
+    void handle_input();
+
     void render_menu_buttons();
     void render_menu_combo_box();
 
