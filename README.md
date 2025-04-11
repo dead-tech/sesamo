@@ -1,6 +1,9 @@
 # Sesamo
 Simple serial port monitor. This is supposed to be an alternative to cutecom.
 
+![sesamo_overview](https://github.com/user-attachments/assets/9267dbaf-cd30-4e45-bff9-bf97211388d1)
+
+
 ## Build
 Currently the only way to use this tool is to build it yourself.
 ```
