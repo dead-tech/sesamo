@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 
+#include <termios.h>
+
 #include <GLFW/glfw3.h>
 
 #include "Serial.hpp"
@@ -29,8 +31,9 @@ private:
 
     void handle_input();
 
-    void render_menu_buttons();
-    void render_menu_combo_box();
+    void render_control_buttons();
+    void render_tty_device_combo_box();
+    void render_baud_rate_combo_box();
 
 private:
     constexpr static auto WINDOW_WIDTH = 1280;
@@ -39,11 +42,31 @@ private:
 
     constexpr static auto TTY_PATH = "/dev/";
 
+    inline static const std::vector<std::pair<std::string_view, int>> BAUD_RATES =  {
+        { "0", B0 },
+        { "50", B50 },
+        { "75", B75 },
+        { "110", B110 },
+        { "134", B134 },
+        { "150", B150 },
+        { "200", B200 },
+        { "300", B300 },
+        { "600", B600 },
+        { "1200", B1200 },
+        { "1800", B1800 },
+        { "2400", B2400 },
+        { "4800", B4800 },
+        { "9600", B9600 },
+        { "19200", B19200 },
+        { "38400", B38400 }
+    };
+
 private:
     GLFWwindow* window = nullptr;
     std::optional<SerialChannel> serial = std::nullopt;
     std::vector<std::string> available_ttys = {};
     size_t selected_tty = 0;
+    std::string_view selected_baud_rate = "19200";
 };
 
 #endif // SESAMO_APPLICATION_HPP

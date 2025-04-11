@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <filesystem>
-#include <termios.h>
 #include <format>
 #include <iostream>
 #include <numeric>
@@ -105,7 +104,10 @@ App::~App()
 void App::handle_input()
 {
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        serial = SerialChannel::open(available_ttys[selected_tty], B19200);
+        const auto baud_rate = std::ranges::find_if(BAUD_RATES, [this](const auto& pair){ return pair.first == selected_baud_rate; });
+        assert(baud_rate != BAUD_RATES.end());
+
+        serial = SerialChannel::open(available_ttys[selected_tty], baud_rate->second);
         assert(serial);
     }
 
@@ -142,9 +144,11 @@ void App::run()
             ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
             ImGui::Begin("sesamo", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize);
 
-            render_menu_buttons();
+            render_control_buttons();
             ImGui::SameLine();
-            render_menu_combo_box();
+            render_tty_device_combo_box();
+            ImGui::SameLine();
+            render_baud_rate_combo_box();
 
             if (serial->is_connected() && serial->has_data_to_read()) {
                 if (const auto message = serial->read(); message) {
@@ -170,12 +174,15 @@ void App::run()
     }
 }
 
-void App::render_menu_buttons()
+void App::render_control_buttons()
 {
     // FIXME: Proper error handling
     ImGui::BeginDisabled(serial->is_connected());
     if (ImGui::Button("Connect")) {
-        serial = SerialChannel::open(available_ttys[selected_tty], B19200);
+        const auto baud_rate = std::ranges::find_if(BAUD_RATES, [this](const auto& pair){ return pair.first == selected_baud_rate; });
+        assert(baud_rate != BAUD_RATES.end());
+
+        serial = SerialChannel::open(available_ttys[selected_tty], baud_rate->second);
         assert(serial);
     }
     ImGui::EndDisabled();
@@ -189,7 +196,7 @@ void App::render_menu_buttons()
     ImGui::EndDisabled();
 }
 
-void App::render_menu_combo_box()
+void App::render_tty_device_combo_box()
 {
     ImGui::Text("Select tty device: ");
     ImGui::SameLine();
@@ -206,6 +213,35 @@ void App::render_menu_combo_box()
             const bool selected = selected_tty == i;
             if (ImGui::Selectable(available_ttys[i].c_str(), selected)) {
                 selected_tty = i;
+            }
+
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    ImGui::PopItemWidth();
+}
+
+void App::render_baud_rate_combo_box()
+{
+    ImGui::Text("Baud Rate: ");
+    ImGui::SameLine();
+
+    auto items = BAUD_RATES | std::views::transform([](const auto& pair) {
+        return pair.first;
+    }) | std::ranges::to<std::vector>();
+    assert(items.size() > 0);
+
+    ImGui::PushItemWidth(ImGui::CalcTextSize(items.back().data()).x + 35.0f);
+        if (ImGui::BeginCombo("##SelectBaudRate", selected_baud_rate.data())) {
+        for (size_t i = 0; i < items.size(); ++i) {
+            const bool selected = selected_baud_rate == items[i];
+            if (ImGui::Selectable(items[i].data(), selected)) {
+                selected_baud_rate = items[i];
             }
 
             if (selected) {
