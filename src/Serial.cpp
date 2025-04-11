@@ -6,6 +6,7 @@
 #include <iostream>
 #include <format>
 #include <cstring>
+#include <sstream>
 
 auto SerialChannel::open(const std::filesystem::path& path, const int baud_rate)
 -> std::optional<SerialChannel>
@@ -43,6 +44,18 @@ auto SerialChannel::open(const std::filesystem::path& path, const int baud_rate)
     }
 
     return std::make_optional(SerialChannel(fd));
+}
+
+auto SerialChannel::has_data_to_read() const -> bool
+{
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(fd, &readfds);
+
+    struct timeval timeout = {0, 0};
+    int ready = select(fd+ 1, &readfds, nullptr, nullptr, &timeout);
+
+    return ready && FD_ISSET(fd, &readfds);
 }
 
 auto SerialChannel::read() const -> std::optional<std::string>

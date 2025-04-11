@@ -17,6 +17,7 @@ static void glfw_error_callback(int error, const char* description)
 
 auto App::spawn() -> std::unique_ptr<App>
 {
+
     glfwSetErrorCallback(glfw_error_callback);
 
     if (!glfwInit()) {
@@ -57,6 +58,7 @@ App::App(GLFWwindow* window)
 
 App::~App()
 {
+    // TODO: should serial->close() be in the destructor of serial?
     if (serial) {
         serial->close();
     }
@@ -70,8 +72,11 @@ App::~App()
 
 void App::run()
 {
+    // TODO: cleanup all this mess
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    // TODO: hook up alaso keyboard bindings to quickly
+    // connect/disconnect and this sort of things
     std::vector<std::string> buffer = {};
     while (!glfwWindowShouldClose(window))
     {
@@ -98,24 +103,15 @@ void App::run()
                 assert(serial);
             }
 
-            if (serial) {
-                fd_set readfds;
-                FD_ZERO(&readfds);
-                FD_SET(serial->fd, &readfds);
-
-                struct timeval timeout = {0, 0}; // 0 seconds, 0 microseconds = non-blocking
-                int ready = select(serial->fd+ 1, &readfds, nullptr, nullptr, &timeout);
-
-                if (ready > 0 && FD_ISSET(serial->fd, &readfds)) {
-                    const auto message = serial->read();
-                    if (message) {
-                        buffer.push_back(*message);
-                    }
+            if (serial && serial->has_data_to_read()) {
+                const auto message = serial->read();
+                if (message) {
+                    buffer.push_back(*message);
                 }
-
-                const auto result = std::accumulate(buffer.begin(), buffer.end(), std::string{});
-                ImGui::Text("%s", result.c_str());
             }
+
+            const auto result = std::accumulate(buffer.begin(), buffer.end(), std::string{});
+            ImGui::Text("%s", result.c_str());
 
             ImGui::End();
             ImGui::PopStyleVar(1);
@@ -128,7 +124,6 @@ void App::run()
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
         glfwSwapBuffers(window);
     }
 }

@@ -2,7 +2,6 @@
 #define SESAMO_SERIAL_HPP
 
 #include <string>
-#include <format>
 #include <filesystem>
 #include <optional>
 
@@ -13,6 +12,7 @@ public:
     open(const std::filesystem::path& path, const int baud_rate)
     -> std::optional<SerialChannel>;
 
+    [[nodiscard]] auto has_data_to_read() const -> bool;
     [[nodiscard]] auto read() const -> std::optional<std::string>;
 
     void close() const;
