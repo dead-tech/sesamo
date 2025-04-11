@@ -101,18 +101,30 @@ App::~App()
     glfwTerminate();
 }
 
+void App::connect_to_serial()
+{
+    const auto baud_rate = std::ranges::find_if(BAUD_RATES, [this](const auto& pair){ return pair.first == selected_baud_rate; });
+    assert(baud_rate != BAUD_RATES.end());
+
+    serial = SerialChannel::open(available_ttys[selected_tty], baud_rate->second);
+    assert(serial);
+}
+
+void App::disconnect_from_serial()
+{
+    if (serial) {
+        serial->close();
+    }
+}
+
 void App::handle_input()
 {
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        const auto baud_rate = std::ranges::find_if(BAUD_RATES, [this](const auto& pair){ return pair.first == selected_baud_rate; });
-        assert(baud_rate != BAUD_RATES.end());
-
-        serial = SerialChannel::open(available_ttys[selected_tty], baud_rate->second);
-        assert(serial);
+        connect_to_serial();
     }
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        serial->close();
+        disconnect_from_serial();
     }
 }
 
@@ -121,8 +133,6 @@ void App::run()
     // TODO: cleanup all this mess
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    // TODO: hook up alaso keyboard bindings to quickly
-    // connect/disconnect and this sort of things
     std::vector<std::string> buffer = {};
     while (!glfwWindowShouldClose(window))
     {
@@ -176,24 +186,25 @@ void App::run()
 
 void App::render_control_buttons()
 {
-    // FIXME: Proper error handling
-    ImGui::BeginDisabled(serial->is_connected());
-    if (ImGui::Button("Connect")) {
-        const auto baud_rate = std::ranges::find_if(BAUD_RATES, [this](const auto& pair){ return pair.first == selected_baud_rate; });
-        assert(baud_rate != BAUD_RATES.end());
-
-        serial = SerialChannel::open(available_ttys[selected_tty], baud_rate->second);
-        assert(serial);
+    // Connect button
+    {
+        ImGui::BeginDisabled(serial->is_connected());
+        if (ImGui::Button("Connect")) {
+            connect_to_serial();
+        }
+        ImGui::EndDisabled();
     }
-    ImGui::EndDisabled();
 
     ImGui::SameLine();
 
-    ImGui::BeginDisabled(!serial->is_connected());
-    if (ImGui::Button("Disconnect") && serial) {
-        serial->close();
+    // Disconnect button
+    {
+        ImGui::BeginDisabled(!serial->is_connected());
+        if (ImGui::Button("Disconnect") && serial) {
+            disconnect_from_serial();
+        }
+        ImGui::EndDisabled();
     }
-    ImGui::EndDisabled();
 }
 
 void App::render_tty_device_combo_box()

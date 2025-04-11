@@ -29,6 +29,9 @@ public:
 private:
     explicit App(GLFWwindow* window);
 
+    void connect_to_serial();
+    void disconnect_from_serial();
+
     void handle_input();
 
     void render_control_buttons();
