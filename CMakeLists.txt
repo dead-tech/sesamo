@@ -7,10 +7,12 @@ set(CXX_FLAGS "-std=c++2b -Wall -Wextra -Werror -Wshadow -Wconversion -Wpedantic
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
-message(STATUS "C++ compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
-
-find_package(glfw3 REQUIRED)
+FetchContent_Declare(
+  glfw3
+  GIT_REPOSITORY https://github.com/glfw/glfw.git
+  GIT_TAG latest
+)
+FetchContent_MakeAvailable(glfw3)
 include_directories(${GLFW_INCLUDE_DIRS})
 
 FetchContent_Declare(imgui_external
