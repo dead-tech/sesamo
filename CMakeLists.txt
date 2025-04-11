@@ -8,11 +8,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 FetchContent_Declare(
-  glfw3
+  glfw
   GIT_REPOSITORY https://github.com/glfw/glfw.git
   GIT_TAG latest
 )
-FetchContent_MakeAvailable(glfw3)
+FetchContent_MakeAvailable(glfw)
 include_directories(${GLFW_INCLUDE_DIRS})
 
 FetchContent_Declare(imgui_external
@@ -26,11 +26,11 @@ add_library(imgui
 	${imgui_external_SOURCE_DIR}/imgui_draw.cpp
 	${imgui_external_SOURCE_DIR}/imgui_tables.cpp
 	${imgui_external_SOURCE_DIR}/imgui_widgets.cpp
-	${imgui_external_SOURCE_DIR}/imgui_demo.cpp
 	${imgui_external_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
 	${imgui_external_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 target_include_directories(imgui PUBLIC ${imgui_external_SOURCE_DIR})
+target_link_libraries(imgui PUBLIC glfw)
 
 add_executable(${PROJECT_NAME} src/main.cpp src/Serial.cpp src/Application.cpp)
-target_link_libraries(${PROJECT_NAME} glfw3 imgui GL)
+target_link_libraries(${PROJECT_NAME} glfw imgui GL)
