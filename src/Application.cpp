@@ -48,6 +48,10 @@ auto App::spawn() -> std::unique_ptr<App>
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(GLSL_VERSION);
 
+    // Load the font
+    io.Fonts->AddFontFromFileTTF("resources/JetBrainsMono-Regular.ttf", 20.0f);
+    io.Fonts->Build();
+
     return std::unique_ptr<App>(new App { window });
 }
 
