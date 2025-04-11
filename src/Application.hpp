@@ -81,7 +81,7 @@ private:
 
     std::string_view selected_baud_rate = "19200";
 
-    bool show_timestamps = false;
+    bool show_timestamps = true;
 };
 
 #endif // SESAMO_APPLICATION_HPP

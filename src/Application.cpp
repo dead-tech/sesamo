@@ -287,11 +287,7 @@ void App::render_timestamp_checkbox()
 
 void App::render_read_area()
 {
-    ImGui::SetNextWindowPos(ImVec2(5.0f, 40.0f));
-    ImGui::SetNextWindowSize(ImVec2(READ_AREA_WIDTH, READ_AREA_HEIGHT));
-    ImGui::Begin("##ReadArea", nullptr, ImGuiWindowFlags_NoDecoration
-                    | ImGuiWindowFlags_NoResize
-                    | ImGuiWindowFlags_AlwaysVerticalScrollbar);
+    ImGui::BeginChild("##ReadArea", ImVec2(READ_AREA_WIDTH, READ_AREA_HEIGHT));
 
     if (serial->is_connected() && serial->has_data_to_read()) {
         if (const auto message = serial->read(); message) {
@@ -318,11 +314,6 @@ void App::render_read_area()
                             return std::format("[{}]: {}\n", timestamp, line);
                         });
 
-
-                for (const auto line: messages_with_timestamp) {
-                    std::cout << std::quoted(line) << "\n";
-                }
-
                 read_buffer.insert(read_buffer.end(), messages_with_timestamp.begin(), messages_with_timestamp.end());
             } else {
                 read_buffer.push_back(*message);
@@ -333,7 +324,7 @@ void App::render_read_area()
     const auto result = std::accumulate(read_buffer.begin(), read_buffer.end(), std::string{});
     ImGui::Text("%s", result.c_str());
 
-    ImGui::End();
+    ImGui::EndChild();
 }
 
 void App::render_connection_status()
