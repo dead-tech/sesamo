@@ -27,6 +27,9 @@ public:
 private:
     explicit App(GLFWwindow* window);
 
+    void render_menu_buttons();
+    void render_menu_combo_box();
+
 private:
     constexpr static auto WINDOW_WIDTH = 1280;
     constexpr static auto WINDOW_HEIGHT = 720;

@@ -128,42 +128,9 @@ void App::run()
             ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
             ImGui::Begin("sesamo", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize);
 
-            ImGui::BeginDisabled(serial->is_connected());
-            if (ImGui::Button("Connect")) {
-                // FIXME: Proper error handling
-                serial = SerialChannel::open(available_ttys[selected_tty], B19200);
-                assert(serial);
-            }
-            ImGui::EndDisabled();
-
+            render_menu_buttons();
             ImGui::SameLine();
-
-            ImGui::BeginDisabled(!serial->is_connected());
-            if (ImGui::Button("Disconnect") && serial) {
-                serial->close();
-            }
-            ImGui::EndDisabled();
-
-            ImGui::SameLine();
-
-
-            ImGui::Text("Select tty device: ");
-            ImGui::SameLine();
-
-            if (ImGui::BeginCombo("##SelectTty", available_ttys[selected_tty].c_str())) {
-                for (size_t i = 0; i < available_ttys.size(); ++i) {
-                    const bool selected = selected_tty == i;
-                    if (ImGui::Selectable(available_ttys[i].c_str(), selected)) {
-                        selected_tty = i;
-                    }
-
-                    if (selected) {
-                        ImGui::SetItemDefaultFocus();
-                    }
-                }
-
-                ImGui::EndCombo();
-            }
+            render_menu_combo_box();
 
             if (serial->is_connected() && serial->has_data_to_read()) {
                 if (const auto message = serial->read(); message) {
@@ -187,4 +154,53 @@ void App::run()
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
     }
+}
+
+void App::render_menu_buttons()
+{
+    // FIXME: Proper error handling
+    ImGui::BeginDisabled(serial->is_connected());
+    if (ImGui::Button("Connect")) {
+        serial = SerialChannel::open(available_ttys[selected_tty], B19200);
+        assert(serial);
+    }
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+
+    ImGui::BeginDisabled(!serial->is_connected());
+    if (ImGui::Button("Disconnect") && serial) {
+        serial->close();
+    }
+    ImGui::EndDisabled();
+}
+
+void App::render_menu_combo_box()
+{
+    ImGui::Text("Select tty device: ");
+    ImGui::SameLine();
+
+    const auto max = std::ranges::max_element(available_ttys, [](const auto rhs, const auto& lhs) {
+        return lhs.size() > rhs.size();
+    });
+
+    assert(max != available_ttys.end());
+    ImGui::PushItemWidth(ImGui::CalcTextSize(max->c_str()).x + 20.0f);
+
+    if (ImGui::BeginCombo("##SelectTty", available_ttys[selected_tty].c_str())) {
+        for (size_t i = 0; i < available_ttys.size(); ++i) {
+            const bool selected = selected_tty == i;
+            if (ImGui::Selectable(available_ttys[i].c_str(), selected)) {
+                selected_tty = i;
+            }
+
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    ImGui::PopItemWidth();
 }
