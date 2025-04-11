@@ -118,16 +118,26 @@ void App::disconnect_from_serial()
     if (!serial->is_connected()) return;
     serial->close();
 }
+
+void App::clear_read_buffer()
+{
+    read_buffer.clear();
 }
 
 void App::handle_input()
 {
-    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
         connect_to_serial();
     }
 
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
         disconnect_from_serial();
+    }
+
+    if ((glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS
+            || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
+        && glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
+        clear_read_buffer();
     }
 }
 
@@ -136,7 +146,6 @@ void App::run()
     // TODO: cleanup all this mess
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    std::vector<std::string> buffer = {};
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -162,14 +171,16 @@ void App::run()
             render_tty_device_combo_box();
             ImGui::SameLine();
             render_baud_rate_combo_box();
+            ImGui::SameLine();
+            ImGui::Text("Status: %s", serial->is_connected() ? "Connected" : "Disconnected");
 
             if (serial->is_connected() && serial->has_data_to_read()) {
                 if (const auto message = serial->read(); message) {
-                    buffer.push_back(*message);
+                    read_buffer.push_back(*message);
                 }
             }
 
-            const auto result = std::accumulate(buffer.begin(), buffer.end(), std::string{});
+            const auto result = std::accumulate(read_buffer.begin(), read_buffer.end(), std::string{});
             ImGui::Text("%s", result.c_str());
 
             ImGui::End();

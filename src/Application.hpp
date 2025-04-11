@@ -31,6 +31,7 @@ private:
 
     void connect_to_serial();
     void disconnect_from_serial();
+    void clear_read_buffer();
 
     void handle_input();
 
@@ -66,9 +67,13 @@ private:
 
 private:
     GLFWwindow* window = nullptr;
+
     std::optional<SerialChannel> serial = std::nullopt;
+    std::vector<std::string> read_buffer;
+
     std::vector<std::string> available_ttys = {};
     size_t selected_tty = 0;
+
     std::string_view selected_baud_rate = "19200";
 };
 
