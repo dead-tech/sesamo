@@ -174,14 +174,7 @@ void App::run()
             ImGui::SameLine();
             ImGui::Text("Status: %s", serial->is_connected() ? "Connected" : "Disconnected");
 
-            if (serial->is_connected() && serial->has_data_to_read()) {
-                if (const auto message = serial->read(); message) {
-                    read_buffer.push_back(*message);
-                }
-            }
-
-            const auto result = std::accumulate(read_buffer.begin(), read_buffer.end(), std::string{});
-            ImGui::Text("%s", result.c_str());
+            render_read_area();
 
             ImGui::End();
             ImGui::PopStyleVar(1);
@@ -278,4 +271,24 @@ void App::render_baud_rate_combo_box()
     }
 
     ImGui::PopItemWidth();
+}
+
+void App::render_read_area()
+{
+    ImGui::SetNextWindowPos(ImVec2(5.0f, 40.0f));
+    ImGui::SetNextWindowSize(ImVec2(READ_AREA_WIDTH, READ_AREA_HEIGHT));
+    ImGui::Begin("##ReadArea", nullptr, ImGuiWindowFlags_NoDecoration
+                    | ImGuiWindowFlags_NoResize
+                    | ImGuiWindowFlags_AlwaysVerticalScrollbar);
+
+    if (serial->is_connected() && serial->has_data_to_read()) {
+        if (const auto message = serial->read(); message) {
+            read_buffer.push_back(*message);
+        }
+    }
+
+    const auto result = std::accumulate(read_buffer.begin(), read_buffer.end(), std::string{});
+    ImGui::Text("%s", result.c_str());
+
+    ImGui::End();
 }

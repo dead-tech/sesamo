@@ -38,10 +38,13 @@ private:
     void render_control_buttons();
     void render_tty_device_combo_box();
     void render_baud_rate_combo_box();
+    void render_read_area();
 
 private:
-    constexpr static auto WINDOW_WIDTH = 1280;
-    constexpr static auto WINDOW_HEIGHT = 720;
+    constexpr static auto WINDOW_WIDTH = 1920;
+    constexpr static auto WINDOW_HEIGHT = 1080;
+    constexpr static auto READ_AREA_WIDTH = 1905;
+    constexpr static auto READ_AREA_HEIGHT = 720;
     constexpr static const char* GLSL_VERSION = "#version 330";
 
     constexpr static auto TTY_PATH = "/dev/";
