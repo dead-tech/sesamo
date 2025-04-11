@@ -1,5 +1,6 @@
 #include "Application.hpp"
 
+#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <filesystem>
 #include <format>
@@ -103,6 +104,8 @@ App::~App()
 
 void App::connect_to_serial()
 {
+    if (serial->is_connected()) return;
+
     const auto baud_rate = std::ranges::find_if(BAUD_RATES, [this](const auto& pair){ return pair.first == selected_baud_rate; });
     assert(baud_rate != BAUD_RATES.end());
 
@@ -112,9 +115,9 @@ void App::connect_to_serial()
 
 void App::disconnect_from_serial()
 {
-    if (serial) {
-        serial->close();
-    }
+    if (!serial->is_connected()) return;
+    serial->close();
+}
 }
 
 void App::handle_input()
