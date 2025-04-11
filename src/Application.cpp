@@ -175,6 +175,8 @@ void App::run()
                 ImGui::SameLine();
                 render_baud_rate_combo_box();
                 ImGui::SameLine();
+                render_timestamp_checkbox();
+                ImGui::SameLine();
                 render_connection_status();
             }
 
@@ -278,6 +280,11 @@ void App::render_baud_rate_combo_box()
     ImGui::PopItemWidth();
 }
 
+void App::render_timestamp_checkbox()
+{
+    ImGui::Checkbox("Show timestamps", &show_timestamps);
+}
+
 void App::render_read_area()
 {
     ImGui::SetNextWindowPos(ImVec2(5.0f, 40.0f));
@@ -288,7 +295,38 @@ void App::render_read_area()
 
     if (serial->is_connected() && serial->has_data_to_read()) {
         if (const auto message = serial->read(); message) {
-            read_buffer.push_back(*message);
+            if (show_timestamps) {
+                using namespace std::chrono;
+
+                const auto now = system_clock::now();
+                const auto time = floor<milliseconds>(now);
+                const auto time_t_now = system_clock::to_time_t(time);
+                const auto local_tm = *std::localtime(&time_t_now);
+                const auto ms = duration_cast<milliseconds>(time.time_since_epoch()) % 1000;
+                const auto timestamp = std::format("{:02}:{:02}:{:02}:{:03}",
+                    local_tm.tm_hour,
+                    local_tm.tm_min,
+                    local_tm.tm_sec,
+                    ms.count());
+
+                auto messages_with_timestamp = *message | std::views::split('\n')
+                        | std::views::transform([](const auto& elem) {
+                            return std::string_view { elem };
+                        }) | std::views::filter([](const auto& line) {
+                            return !line.empty() && line != "\n";
+                        }) | std::views::transform([&](const auto& line) {
+                            return std::format("[{}]: {}\n", timestamp, line);
+                        });
+
+
+                for (const auto line: messages_with_timestamp) {
+                    std::cout << std::quoted(line) << "\n";
+                }
+
+                read_buffer.insert(read_buffer.end(), messages_with_timestamp.begin(), messages_with_timestamp.end());
+            } else {
+                read_buffer.push_back(*message);
+            }
         }
     }
 

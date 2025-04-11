@@ -38,6 +38,7 @@ private:
     void render_control_buttons();
     void render_tty_device_combo_box();
     void render_baud_rate_combo_box();
+    void render_timestamp_checkbox();
     void render_read_area();
     void render_connection_status();
 
@@ -79,6 +80,8 @@ private:
     size_t selected_tty = 0;
 
     std::string_view selected_baud_rate = "19200";
+
+    bool show_timestamps = false;
 };
 
 #endif // SESAMO_APPLICATION_HPP
