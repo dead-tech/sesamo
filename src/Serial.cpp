@@ -77,8 +77,14 @@ auto SerialChannel::read() const -> std::optional<std::string>
     return ss.str();
 }
 
-void SerialChannel::close() const
+auto SerialChannel::is_connected() const -> bool
+{
+    return connected;
+}
+
+void SerialChannel::close()
 {
     ::close(fd);
+    connected = false;
 }
 

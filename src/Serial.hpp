@@ -15,7 +15,10 @@ public:
     [[nodiscard]] auto has_data_to_read() const -> bool;
     [[nodiscard]] auto read() const -> std::optional<std::string>;
 
-    void close() const;
+    [[nodiscard]] auto is_connected() const -> bool;
+
+    void close();
+
 
 private:
     explicit SerialChannel(const int fd)
@@ -23,7 +26,8 @@ private:
     {}
 
 public:
-    int fd;
+    int fd = -1;
+    bool connected = true;
 };
 
 #endif // SESAMO_SERIAL_HPP

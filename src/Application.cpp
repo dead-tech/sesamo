@@ -62,8 +62,7 @@ App::App(GLFWwindow* window)
 
 App::~App()
 {
-    // TODO: should serial->close() be in the destructor of serial?
-    if (serial) {
+    if (serial->is_connected()) {
         serial->close();
     }
 
@@ -100,16 +99,24 @@ void App::run()
             ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
             ImGui::Begin("sesamo", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize);
 
-
+            ImGui::BeginDisabled(serial->is_connected());
             if (ImGui::Button("Connect")) {
                 // FIXME: Proper error handling
                 serial = SerialChannel::open("/dev/ttyACM0", B19200);
                 assert(serial);
             }
+            ImGui::EndDisabled();
 
-            if (serial && serial->has_data_to_read()) {
-                const auto message = serial->read();
-                if (message) {
+            ImGui::SameLine();
+
+            ImGui::BeginDisabled(!serial->is_connected());
+            if (ImGui::Button("Disconnect") && serial) {
+                serial->close();
+            }
+            ImGui::EndDisabled();
+
+            if (serial->is_connected() && serial->has_data_to_read()) {
+                if (const auto message = serial->read(); message) {
                     buffer.push_back(*message);
                 }
             }
