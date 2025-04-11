@@ -11,9 +11,10 @@
 auto SerialChannel::open(const std::filesystem::path& path, const int baud_rate)
 -> std::optional<SerialChannel>
 {
+    // NOLINTNEXTLINE
     const auto fd = ::open(path.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
 
-    struct termios tty;
+    struct termios tty {};
     if (tcgetattr(fd, &tty) < 0) {
         std::cerr << std::format("[ERROR] failed to get tty current attributes: {}\n", strerror(errno));
         return std::nullopt;
@@ -52,10 +53,10 @@ auto SerialChannel::has_data_to_read() const -> bool
     FD_ZERO(&readfds);
     FD_SET(fd, &readfds);
 
-    struct timeval timeout = {0, 0};
+    struct timeval timeout = { .tv_sec=0, .tv_usec=0 };
     int ready = select(fd+ 1, &readfds, nullptr, nullptr, &timeout);
 
-    return ready && FD_ISSET(fd, &readfds);
+    return ready > 0 && FD_ISSET(fd, &readfds);
 }
 
 auto SerialChannel::read() const -> std::optional<std::string>
@@ -69,9 +70,9 @@ auto SerialChannel::read() const -> std::optional<std::string>
             return std::nullopt;
         }
 
-        ss << msg;
-        memset(msg, 0, 256);
-        if (bytes == 0) break;
+        ss << static_cast<char*>(msg);
+        memset(static_cast<char*>(msg), 0, 256);
+        if (bytes == 0) { break; }
     }
 
     return ss.str();

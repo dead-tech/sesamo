@@ -76,7 +76,7 @@ private:
     std::optional<SerialChannel> serial = std::nullopt;
     std::vector<std::string> read_buffer;
 
-    std::vector<std::string> available_ttys = {};
+    std::vector<std::string> available_ttys;
     size_t selected_tty = 0;
 
     std::string_view selected_baud_rate = "19200";

@@ -12,43 +12,45 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
-[[nodiscard]] static auto load_available_ttys(const auto& path)
-{
-    const auto iterator = std::filesystem::directory_iterator(path);
+namespace {
+    [[nodiscard]] auto load_available_ttys(const auto& path)
+    {
+        const auto iterator = std::filesystem::directory_iterator(path);
 
-    const auto stringify = [](const auto& dir_entry) {
-        return dir_entry.path().string();
-    };
+        const auto stringify = [](const auto& dir_entry) {
+            return dir_entry.path().string();
+        };
 
-    const auto is_valid_tty = [](const auto& str) {
-        const std::string prefix = "/dev/tty";
-        if (!str.starts_with(prefix)) {
-            return false;
-        }
+        const auto is_valid_tty = [](const auto& str) {
+            const std::string prefix = "/dev/tty";
+            if (!str.starts_with(prefix)) {
+                return false;
+            }
 
-        const auto substr = str.substr(prefix.size());
-        return std::ranges::find_if(substr, [](const char ch) { return !std::isdigit(ch); }) != substr.end();
-    };
+            const auto substr = str.substr(prefix.size());
+            return std::ranges::find_if(substr, [](const char ch) { return !std::isdigit(ch); }) != substr.end();
+        };
 
-    auto ret = iterator
-        | std::views::transform(stringify)
-        | std::views::filter(is_valid_tty)
-        | std::ranges::to<std::vector>();
+        auto ret = iterator
+            | std::views::transform(stringify)
+            | std::views::filter(is_valid_tty)
+            | std::ranges::to<std::vector>();
 
-    std::ranges::sort(ret);
-    return ret;
-}
+        std::ranges::sort(ret);
+        return ret;
+    }
 
-static void glfw_error_callback(int error, const char* description)
-{
-    std::cerr << std::format("[ERROR] GLFW Error ({}): {}\n", error, description);
+    void glfw_error_callback(int error, const char* description)
+    {
+        std::cerr << std::format("[ERROR] GLFW Error ({}): {}\n", error, description);
+    }
 }
 
 auto App::spawn() -> std::unique_ptr<App>
 {
     glfwSetErrorCallback(glfw_error_callback);
 
-    if (!glfwInit()) {
+    if (glfwInit() == 0) {
         std::cerr << std::format("[ERROR] Glfw failed initialize\n");
         return nullptr;
     }
@@ -77,7 +79,7 @@ auto App::spawn() -> std::unique_ptr<App>
     ImGui_ImplOpenGL3_Init(GLSL_VERSION);
 
     // Load the font
-    io.Fonts->AddFontFromFileTTF("resources/JetBrainsMono-Regular.ttf", 20.0f);
+    io.Fonts->AddFontFromFileTTF("resources/JetBrainsMono-Regular.ttf", 20.0);
     io.Fonts->Build();
 
     return std::unique_ptr<App>(new App { window });
@@ -104,7 +106,7 @@ App::~App()
 
 void App::connect_to_serial()
 {
-    if (serial->is_connected()) return;
+    if (serial->is_connected()) { return; }
 
     const auto baud_rate = std::ranges::find_if(BAUD_RATES, [this](const auto& pair){ return pair.first == selected_baud_rate; });
     assert(baud_rate != BAUD_RATES.end());
@@ -115,7 +117,7 @@ void App::connect_to_serial()
 
 void App::disconnect_from_serial()
 {
-    if (!serial->is_connected()) return;
+    if (!serial->is_connected()) { return; }
     serial->close();
 }
 
@@ -144,9 +146,9 @@ void App::handle_input()
 void App::run()
 {
     // TODO: cleanup all this mess
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 clear_color = ImVec4(0.45, 0.55, 0.60, 1.00);
 
-    while (!glfwWindowShouldClose(window))
+    while (glfwWindowShouldClose(window) == 0)
     {
         glfwPollEvents();
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
@@ -162,8 +164,8 @@ void App::run()
 
         // Main window
         {
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-            ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0);
+            ImGui::SetNextWindowPos(ImVec2(0.0, 0.0));
             ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
             ImGui::Begin("sesamo", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize);
 
@@ -188,7 +190,8 @@ void App::run()
         }
 
         ImGui::Render();
-        int display_w, display_h;
+        int display_w = 0;
+        int display_h = 0;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
@@ -223,15 +226,16 @@ void App::render_control_buttons()
 
 void App::render_tty_device_combo_box()
 {
+    // NOLINTNEXTLINE
     ImGui::Text("Select tty device: ");
     ImGui::SameLine();
 
-    const auto max = std::ranges::max_element(available_ttys, [](const auto rhs, const auto& lhs) {
+    const auto max = std::ranges::max_element(available_ttys, [](const auto& rhs, const auto& lhs) {
         return lhs.size() > rhs.size();
     });
 
     assert(max != available_ttys.end());
-    ImGui::PushItemWidth(ImGui::CalcTextSize(max->c_str()).x + 20.0f);
+    ImGui::PushItemWidth(ImGui::CalcTextSize(max->c_str()).x + 20.0F);
 
     if (ImGui::BeginCombo("##SelectTty", available_ttys[selected_tty].c_str())) {
         for (size_t i = 0; i < available_ttys.size(); ++i) {
@@ -253,6 +257,7 @@ void App::render_tty_device_combo_box()
 
 void App::render_baud_rate_combo_box()
 {
+    // NOLINTNEXTLINE
     ImGui::Text("Baud Rate: ");
     ImGui::SameLine();
 
@@ -261,12 +266,15 @@ void App::render_baud_rate_combo_box()
     }) | std::ranges::to<std::vector>();
     assert(items.size() > 0);
 
-    ImGui::PushItemWidth(ImGui::CalcTextSize(items.back().data()).x + 35.0f);
+    // NOLINTNEXTLINE
+    ImGui::PushItemWidth(ImGui::CalcTextSize(items.back().data()).x + 35.0F);
+        // NOLINTNEXTLINE
         if (ImGui::BeginCombo("##SelectBaudRate", selected_baud_rate.data())) {
-        for (size_t i = 0; i < items.size(); ++i) {
-            const bool selected = selected_baud_rate == items[i];
-            if (ImGui::Selectable(items[i].data(), selected)) {
-                selected_baud_rate = items[i];
+        for (const auto& item : items) {
+            const bool selected = selected_baud_rate == item;
+            // NOLINTNEXTLINE
+            if (ImGui::Selectable(item.data(), selected)) {
+                selected_baud_rate = item;
             }
 
             if (selected) {
@@ -322,6 +330,7 @@ void App::render_read_area()
     }
 
     const auto result = std::accumulate(read_buffer.begin(), read_buffer.end(), std::string{});
+    // NOLINTNEXTLINE
     ImGui::Text("%s", result.c_str());
 
     ImGui::EndChild();
