@@ -160,20 +160,25 @@ void App::run()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // Main window
         {
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
             ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
             ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
             ImGui::Begin("sesamo", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize);
 
-            render_control_buttons();
-            ImGui::SameLine();
-            render_tty_device_combo_box();
-            ImGui::SameLine();
-            render_baud_rate_combo_box();
-            ImGui::SameLine();
-            ImGui::Text("Status: %s", serial->is_connected() ? "Connected" : "Disconnected");
+            // Menu
+            {
+                render_control_buttons();
+                ImGui::SameLine();
+                render_tty_device_combo_box();
+                ImGui::SameLine();
+                render_baud_rate_combo_box();
+                ImGui::SameLine();
+                render_connection_status();
+            }
 
+            // Read Area
             render_read_area();
 
             ImGui::End();
@@ -291,4 +296,20 @@ void App::render_read_area()
     ImGui::Text("%s", result.c_str());
 
     ImGui::End();
+}
+
+void App::render_connection_status()
+{
+    const char* text = serial->is_connected() ? "Connected" : "Disconnected";
+    ImVec2 text_pos = ImGui::GetCursorScreenPos();
+    ImVec2 text_size = ImGui::CalcTextSize(text);
+
+    ImU32 bg_color = serial->is_connected() ? IM_COL32(0, 255, 0, 150) : IM_COL32(255, 0, 0, 150);
+    ImGui::GetWindowDrawList()->AddRectFilled(
+        text_pos,
+        ImVec2(text_pos.x + text_size.x, (text_pos.y * 2) + text_size.y),
+        bg_color
+    );
+
+    ImGui::TextUnformatted(text);
 }

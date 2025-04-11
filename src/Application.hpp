@@ -39,6 +39,7 @@ private:
     void render_tty_device_combo_box();
     void render_baud_rate_combo_box();
     void render_read_area();
+    void render_connection_status();
 
 private:
     constexpr static auto WINDOW_WIDTH = 1920;
