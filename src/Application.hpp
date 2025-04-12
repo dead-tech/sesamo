@@ -39,7 +39,7 @@ class [[nodiscard]] App final
     void render_tty_device_combo_box();
     void render_baud_rate_combo_box();
     void render_timestamp_checkbox();
-    void render_read_area();
+    void render_serial_output();
     void render_connection_status();
 
   private:

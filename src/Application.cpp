@@ -24,8 +24,12 @@ namespace
         return dir_entry.path().string();
     };
 
+    // FIXME: A more correct approach would be to read
+    // "/sys/class/tty/" and i think check for those symlinks
+    // that point to something other than " /../../devices/virtual"
+    // so it is an actual physical device.
     const auto is_valid_tty = [](const auto &str) {
-        const std::string prefix = "/dev/tty";
+        constexpr std::string_view prefix = "/dev/tty";
         if (!str.starts_with(prefix)) { return false; }
 
         const auto substr = str.substr(prefix.size());
@@ -84,8 +88,11 @@ auto App::spawn() -> std::unique_ptr<App>
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(GLSL_VERSION);
 
-    // NOLINTNEXTLINE
-    io.Fonts->AddFontFromMemoryCompressedTTF(JetBrainsMonoRegular_compressed_data, JetBrainsMonoRegular_compressed_size, 20.0); 
+    io.Fonts->AddFontFromMemoryCompressedTTF(
+      static_cast<const unsigned char*>(JetBrainsMonoRegular_compressed_data),
+      JetBrainsMonoRegular_compressed_size,
+      20.0
+    );
     io.Fonts->Build();
 
     return std::unique_ptr<App>(new App{ window });
@@ -150,7 +157,6 @@ void App::handle_input()
 
 void App::run()
 {
-    // TODO: cleanup all this mess
     ImVec4 clear_color = ImVec4(0.45, 0.55, 0.60, 1.00);
 
     while (glfwWindowShouldClose(window) == 0) {
@@ -188,7 +194,7 @@ void App::run()
             }
 
             // Read Area
-            render_read_area();
+            render_serial_output();
 
             ImGui::End();
             ImGui::PopStyleVar(1);
@@ -233,7 +239,7 @@ void App::render_control_buttons()
 void App::render_tty_device_combo_box()
 {
     // NOLINTNEXTLINE
-    ImGui::Text("Select tty device: ");
+    ImGui::TextUnformatted("Select tty device: ");
     ImGui::SameLine();
 
     const auto max = std::ranges::max_element(
@@ -265,7 +271,7 @@ void App::render_tty_device_combo_box()
 void App::render_baud_rate_combo_box()
 {
     // NOLINTNEXTLINE
-    ImGui::Text("Baud Rate: ");
+    ImGui::TextUnformatted("Baud Rate: ");
     ImGui::SameLine();
 
     auto items =
@@ -299,7 +305,7 @@ void App::render_timestamp_checkbox()
     ImGui::Checkbox("Show timestamps", &show_timestamps);
 }
 
-void App::render_read_area()
+void App::render_serial_output()
 {
     ImGui::BeginChild("##ReadArea", ImVec2(READ_AREA_WIDTH, READ_AREA_HEIGHT));
 
@@ -348,8 +354,11 @@ void App::render_read_area()
     const auto result =
       std::accumulate(read_buffer.begin(), read_buffer.end(), std::string{});
     // NOLINTNEXTLINE
-    ImGui::Text("%s", result.c_str());
+    ImGui::TextUnformatted(result.c_str());
 
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+        ImGui::SetScrollHereY(1.0);
+    }
     ImGui::EndChild();
 }
 

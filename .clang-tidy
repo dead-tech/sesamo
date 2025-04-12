@@ -33,6 +33,7 @@ Checks: "*,
         -cert-msc50-cpp,
         -cert-msc51-cpp,
         -boost-use-ranges,
+        -readability-redundant-access-specifiers,
 "
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
