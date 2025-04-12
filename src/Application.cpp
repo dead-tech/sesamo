@@ -222,7 +222,7 @@ void App::render_control_buttons()
     // Connect button
     {
         ImGui::BeginDisabled(serial->is_connected());
-        if (ImGui::Button("Connect")) { connect_to_serial(); }
+        if (ImGui::Button("Connect [Enter]")) { connect_to_serial(); }
         ImGui::EndDisabled();
     }
 
@@ -231,8 +231,15 @@ void App::render_control_buttons()
     // Disconnect button
     {
         ImGui::BeginDisabled(!serial->is_connected());
-        if (ImGui::Button("Disconnect") && serial) { disconnect_from_serial(); }
+        if (ImGui::Button("Disconnect [Q]") && serial) { disconnect_from_serial(); }
         ImGui::EndDisabled();
+    }
+
+    ImGui::SameLine();
+
+    // Clear screen button
+    {
+        if (ImGui::Button("Clear Screen [^L]")) { clear_read_buffer(); }
     }
 }
 
