@@ -1,4 +1,5 @@
 #include "Application.hpp"
+#include "../resources/jet_brains_mono_regular.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -83,8 +84,8 @@ auto App::spawn() -> std::unique_ptr<App>
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(GLSL_VERSION);
 
-    // Load the font
-    io.Fonts->AddFontFromFileTTF("resources/JetBrainsMono-Regular.ttf", 20.0);
+    // NOLINTNEXTLINE
+    io.Fonts->AddFontFromMemoryCompressedTTF(JetBrainsMonoRegular_compressed_data, JetBrainsMonoRegular_compressed_size, 20.0); 
     io.Fonts->Build();
 
     return std::unique_ptr<App>(new App{ window });
