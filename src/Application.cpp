@@ -3,9 +3,7 @@
 
 #include <algorithm>
 #include <filesystem>
-#include <format>
 #include <GLFW/glfw3.h>
-#include <iostream>
 #include <print>
 #include <ranges>
 
@@ -49,9 +47,7 @@ namespace
 
 void glfw_error_callback(int error, const char *description)
 {
-    std::cerr << std::format(
-      "[ERROR] GLFW Error ({}): {}\n", error, description
-    );
+    std::print(stderr, "[ERROR] GLFW Error ({}): {}\n", error, description);
 }
 } // namespace
 
@@ -60,7 +56,7 @@ auto App::spawn() -> std::unique_ptr<App>
     glfwSetErrorCallback(glfw_error_callback);
 
     if (glfwInit() == 0) {
-        std::cerr << std::format("[ERROR] Glfw failed initialize\n");
+        std::print(stderr, "[ERROR] Glfw failed initialize\n");
         return nullptr;
     }
 
@@ -71,7 +67,7 @@ auto App::spawn() -> std::unique_ptr<App>
     GLFWwindow *window =
       glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "sesamo", nullptr, nullptr);
     if (window == nullptr) {
-        std::cerr << std::format("[ERROR] Glfw failed to create window\n");
+        std::print(stderr, "[ERROR] Glfw failed to create window\n");
         return nullptr;
     }
 
@@ -336,9 +332,7 @@ void App::render_serial_output()
     }
 
     std::string output;
-    for (const auto &line : received_messages_buffer) {
-        output += line;
-    }
+    for (const auto &line : received_messages_buffer) { output += line; }
     ImGui::TextUnformatted(output.c_str());
 
     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
