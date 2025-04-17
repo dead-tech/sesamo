@@ -6,7 +6,7 @@
 #include <format>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include <numeric>
+#include <print>
 #include <ranges>
 
 #include <backends/imgui_impl_glfw.h>
@@ -89,7 +89,7 @@ auto App::spawn() -> std::unique_ptr<App>
     ImGui_ImplOpenGL3_Init(GLSL_VERSION);
 
     io.Fonts->AddFontFromMemoryCompressedTTF(
-      static_cast<const unsigned char*>(JetBrainsMonoRegular_compressed_data),
+      static_cast<const unsigned char *>(JetBrainsMonoRegular_compressed_data),
       JetBrainsMonoRegular_compressed_size,
       20.0
     );
@@ -106,7 +106,7 @@ App::App(GLFWwindow *window)
 
 App::~App()
 {
-    if (serial->is_connected()) { serial->close(); }
+    if (connected) { serial->close(); }
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -117,7 +117,7 @@ App::~App()
 
 void App::connect_to_serial()
 {
-    if (serial->is_connected()) { return; }
+    if (connected) { return; }
 
     const auto baud_rate =
       std::ranges::find_if(BAUD_RATES, [this](const auto &pair) {
@@ -125,18 +125,24 @@ void App::connect_to_serial()
       });
     assert(baud_rate != BAUD_RATES.end());
 
-    serial =
-      SerialChannel::open(available_ttys[selected_tty], baud_rate->second);
-    assert(serial);
+    const auto result =
+      Serial::open(available_ttys[selected_tty], baud_rate->second);
+    if (!result) {
+        quit = true;
+        return;
+    }
+    serial    = *result;
+    connected = true;
 }
 
 void App::disconnect_from_serial()
 {
-    if (!serial->is_connected()) { return; }
+    if (!connected) { return; }
     serial->close();
+    connected = false;
 }
 
-void App::clear_read_buffer() { read_buffer.clear(); }
+void App::clear_received_messages_buffer() { received_messages_buffer.clear(); }
 
 void App::handle_input()
 {
@@ -151,7 +157,7 @@ void App::handle_input()
     if ((glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS
          || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
         && glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
-        clear_read_buffer();
+        clear_received_messages_buffer();
     }
 }
 
@@ -159,7 +165,9 @@ void App::run()
 {
     ImVec4 clear_color = ImVec4(0.45, 0.55, 0.60, 1.00);
 
-    while (glfwWindowShouldClose(window) == 0) {
+    while (!quit) {
+        if (glfwWindowShouldClose(window) == 1) { quit = true; }
+
         glfwPollEvents();
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) { continue; }
 
@@ -187,8 +195,6 @@ void App::run()
                 render_tty_device_combo_box();
                 ImGui::SameLine();
                 render_baud_rate_combo_box();
-                ImGui::SameLine();
-                render_timestamp_checkbox();
                 ImGui::SameLine();
                 render_connection_status();
             }
@@ -221,7 +227,7 @@ void App::render_control_buttons()
 {
     // Connect button
     {
-        ImGui::BeginDisabled(serial->is_connected());
+        ImGui::BeginDisabled(connected);
         if (ImGui::Button("Connect [Enter]")) { connect_to_serial(); }
         ImGui::EndDisabled();
     }
@@ -230,8 +236,10 @@ void App::render_control_buttons()
 
     // Disconnect button
     {
-        ImGui::BeginDisabled(!serial->is_connected());
-        if (ImGui::Button("Disconnect [Q]") && serial) { disconnect_from_serial(); }
+        ImGui::BeginDisabled(!connected);
+        if (ImGui::Button("Disconnect [Q]") && serial) {
+            disconnect_from_serial();
+        }
         ImGui::EndDisabled();
     }
 
@@ -239,7 +247,9 @@ void App::render_control_buttons()
 
     // Clear screen button
     {
-        if (ImGui::Button("Clear Screen [^L]")) { clear_read_buffer(); }
+        if (ImGui::Button("Clear Screen [^L]")) {
+            clear_received_messages_buffer();
+        }
     }
 }
 
@@ -307,61 +317,29 @@ void App::render_baud_rate_combo_box()
     ImGui::PopItemWidth();
 }
 
-void App::render_timestamp_checkbox()
-{
-    ImGui::Checkbox("Show timestamps", &show_timestamps);
-}
-
 void App::render_serial_output()
 {
     ImGui::BeginChild("##ReadArea", ImVec2(READ_AREA_WIDTH, READ_AREA_HEIGHT));
 
-    if (serial->is_connected() && serial->has_data_to_read()) {
-        if (const auto message = serial->read(); message) {
-            if (show_timestamps) {
-                using namespace std::chrono;
+    if (connected) {
+        auto message = std::ranges::fold_left(
+          serial->read_all(),
+          std::string{},
+          [](const auto &acc, const auto &elem) { return acc + elem; }
+        );
 
-                const auto now        = system_clock::now();
-                const auto time       = floor<milliseconds>(now);
-                const auto time_t_now = system_clock::to_time_t(time);
-                const auto local_tm   = *std::localtime(&time_t_now);
-                const auto ms =
-                  duration_cast<milliseconds>(time.time_since_epoch()) % 1000;
-                const auto timestamp = std::format(
-                  "{:02}:{:02}:{:02}:{:03}",
-                  local_tm.tm_hour,
-                  local_tm.tm_min,
-                  local_tm.tm_sec,
-                  ms.count()
-                );
+        if (!message.empty()) { received_messages_buffer.push_back(message); }
 
-                auto messages_with_timestamp =
-                  *message | std::views::split('\n')
-                  | std::views::transform([](const auto &elem) {
-                        return std::string_view{ elem };
-                    })
-                  | std::views::filter([](const auto &line) {
-                        return !line.empty() && line != "\n";
-                    })
-                  | std::views::transform([&](const auto &line) {
-                        return std::format("[{}]: {}\n", timestamp, line);
-                    });
-
-                read_buffer.insert(
-                  read_buffer.end(),
-                  messages_with_timestamp.begin(),
-                  messages_with_timestamp.end()
-                );
-            } else {
-                read_buffer.push_back(*message);
-            }
+        if (received_messages_buffer.size() > RECEIVE_MESSAGE_CAPACITY) {
+            received_messages_buffer.clear();
         }
     }
 
-    const auto result =
-      std::accumulate(read_buffer.begin(), read_buffer.end(), std::string{});
-    // NOLINTNEXTLINE
-    ImGui::TextUnformatted(result.c_str());
+    std::string output;
+    for (const auto &line : received_messages_buffer) {
+        output += line;
+    }
+    ImGui::TextUnformatted(output.c_str());
 
     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
         ImGui::SetScrollHereY(1.0);
@@ -369,14 +347,14 @@ void App::render_serial_output()
     ImGui::EndChild();
 }
 
-void App::render_connection_status()
+void App::render_connection_status() const
 {
-    const char *text = serial->is_connected() ? "Connected" : "Disconnected";
+    const char *text      = connected ? "Connected" : "Disconnected";
     ImVec2      text_pos  = ImGui::GetCursorScreenPos();
     ImVec2      text_size = ImGui::CalcTextSize(text);
 
-    ImU32 bg_color = serial->is_connected() ? IM_COL32(0, 255, 0, 150)
-                                            : IM_COL32(255, 0, 0, 150);
+    ImU32 bg_color =
+      connected ? IM_COL32(0, 255, 0, 150) : IM_COL32(255, 0, 0, 150);
     ImGui::GetWindowDrawList()->AddRectFilled(
       text_pos,
       ImVec2(text_pos.x + text_size.x, (text_pos.y * 2) + text_size.y),

@@ -31,16 +31,15 @@ class [[nodiscard]] App final
 
     void connect_to_serial();
     void disconnect_from_serial();
-    void clear_read_buffer();
+    void clear_received_messages_buffer();
 
     void handle_input();
 
     void render_control_buttons();
     void render_tty_device_combo_box();
     void render_baud_rate_combo_box();
-    void render_timestamp_checkbox();
     void render_serial_output();
-    void render_connection_status();
+    void render_connection_status() const;
 
   private:
     constexpr static auto        WINDOW_WIDTH     = 1920;
@@ -48,6 +47,8 @@ class [[nodiscard]] App final
     constexpr static auto        READ_AREA_WIDTH  = 1905;
     constexpr static auto        READ_AREA_HEIGHT = 720;
     constexpr static const char *GLSL_VERSION     = "#version 330";
+
+    constexpr static auto RECEIVE_MESSAGE_CAPACITY = 4096;
 
     constexpr static auto TTY_PATH = "/dev/";
 
@@ -61,16 +62,16 @@ class [[nodiscard]] App final
 
   private:
     GLFWwindow *window = nullptr;
+    bool        quit   = false;
 
-    std::optional<SerialChannel> serial = std::nullopt;
-    std::vector<std::string>     read_buffer;
+    std::shared_ptr<Serial>  serial    = nullptr;
+    bool                     connected = false;
+    std::vector<std::string> received_messages_buffer;
 
     std::vector<std::string> available_ttys;
     size_t                   selected_tty = 0;
 
     std::string_view selected_baud_rate = "19200";
-
-    bool show_timestamps = true;
 };
 
 #endif // SESAMO_APPLICATION_HPP
